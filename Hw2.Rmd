@@ -1,0 +1,161 @@
+---
+title: Hw2
+output: html_document
+---
+
+# Applying functions in R
+
+Installing to tead Excel files:
+
+```{r}
+# install.packages('rio') #this installs the rio package, which allows us to read Excel files easily
+
+
+linkGit="https://github.com/DACSS-Fundamentals/overview/raw/refs/heads/main/FSI-2023-DOWNLOAD.xlsx" #stores the URL of the Excel file containing the Fragile States Index data
+
+fragility23=rio::import(file = linkGit) #this imports the Excel file directly from the URL and store it as 'fragility23', this object now holds the dataset in memory
+```
+
+```{r}
+str(fragility23) #this displays the structure of the dataset: shows variable names, data types, and a preview of values
+```
+
+## Apply square root function?
+
+```{r}
+sqrt(fragility23[,4:5]) #this applies the square root function to multiple columns (4 and 5), which contain numeric data. Otherwise it would not work
+```
+
+```{r}
+# one column
+sqrt(fragility23$Total) #applies the square root function to the 'Total' column only
+```
+
+```{r}
+# one value
+sqrt(fragility23$Total[1]) #this applies the square root function to the first value of the 'Total' column
+```
+
+## Applying **sum()**:
+
+```{r}
+sum(fragility23[,4:5]) #this calculates the sum of all values across columns 4 and 5. it flattens the values into a single total
+```
+
+```{r}
+print(apply(fragility23[,4:5],2,sum)) #apply() calculates the sum of each column: the '2' indicates that the function is applied column-wise
+```
+
+```{r}
+typeof(apply(fragility23[,4:5],2,sum)) #this check the data type of the output from apply(). If the output is not a list, then it is a vector
+
+```
+
+```{r}
+print(apply(fragility23[,4:5],1,sum)) #apply() calculates the sum of each row. the '1' indicates that the function is applied row-wise
+```
+
+### Apply by iterating:
+
+```{r}
+print(lapply(fragility23[,4:5],sum)) #lapply() calculates the sum of each column. lapply() always returns a list
+```
+
+Notice output of **lapply**:
+
+```{r}
+typeof(lapply(fragility23[,4:5],sum)) #checks the data type returned by lapply()
+```
+
+```{r}
+class(lapply(fragility23[,4:5],sum)) #checks the class of the object returned by lapply()
+```
+
+Notice output of **sapply**:
+
+```{r}
+print(sapply(fragility23[,4:5],sum)) #sapply() calculates column sums. sapply() attempts to simplify the output into a vector
+```
+
+```{r}
+class(sapply(fragility23[,4:5],sum)) #checks the class of the object returned by sapply()
+```
+
+Similarly:
+
+```{r}
+print(lapply(fragility23[,4:5],sqrt)) #applies the square root function to each column using lapply()
+```
+
+```{r}
+class(lapply(fragility23[,4:5],sqrt)) #checks the class of the output
+```
+
+```{r}
+print(sapply(fragility23[,4:5],sqrt)) # applies the square root function to each column using sapply(). The output is simplified into a matrix or vector
+```
+
+```{r}
+class(sapply(fragility23[,4:5],sqrt)) #checks the class of the output
+```
+
+Now our own function:
+
+```{r}
+theOnesOK = function(DF_country_and_variable) { #This line defines a function named theOnesOK.The function takes one argument, DF_country_and_variable, which is expected to be a data frame containing a country column and a single numeric variable.
+  variable_values <- DF_country_and_variable[,2] #This extracts the second column of the data frame, which is assumed to be the numeric variable of interest. The values are stored in variable_values.
+  avg_value <- mean(variable_values, na.rm = TRUE) #This calculates the mean of the numeric variable. The argument na.rm = TRUE ensures missing values are ignored.
+  is_above <- ifelse(variable_values > avg_value, "Above Average", "Below/At Average") #This compares each value in the variable to the mean. If the value is greater than the mean, it is labeled "Above Average"; otherwise, it is labeled "Below/At Average".
+  DF_country_and_variable$Status <- is_above #This adds a new column named Status to the data frame, storing the classification for each row.
+  return(DF_country_and_variable) #This returns the entire modified data frame, including the original columns and the new Status column.
+} #This closes the function definition.
+```
+
+```{r}
+theOnesOK(fragility23[,c('Country','S1: Demographic Pressures')]) ##This line calls the function `theOnesOK`. Inside the function call, a subset of the data frame `fragility23` is passed in. The subset includes only two columns: 'Country'(identifies each country) and 'S1: Demographic Pressures'(the numeric variable being analyzed). This subset matches the expected input format of the function, where the second column contains the numeric variable. The function then classifies each country as above or below the average for demographic pressures and returns the updated data frame.
+```
+
+```{r}
+mystery=function(DF,positionsToUse,CountryColumn='Country'){ ##This line defines a function named `mystery`. The function takes three arguments: DF (a data frame), positionsToUse (the column positions of numeric variables to use) CountryColumn (the name of the country column (default is 'Country'))
+  newDF=DF[,c(CountryColumn),drop = FALSE] # This extracts the country column from the data frame. The argument `drop = FALSE` ensures the result remains a data frame rather than being converted to a vector. The result is stored in a new data frame called `newDF`.
+  average='average' #This creates a character string with the value 'average'. It will later be used as the name of a new column.
+  newDF[,average]=apply(DF[,positionsToUse],1,mean,na.rm = TRUE) #This calculates the mean across the selected columns for each row. The apply() function is used with: MARGIN = 1 (meaning the function is applied row-wise), mean as the function to apply, and na.rm = TRUE to ignore missing values. The resulting row averages are added to `newDF` as a new column named 'average'.
+  return(newDF[,c(CountryColumn,average)]) ## This returns a data frame containing only the country column and the newly calculated average column.
+} #This closes the function definition.
+```
+
+```{r}
+fragility23[,c('Total',	'S1: Demographic Pressures')] #This line subsets the data frame `fragility23`. It selects only the columns named 'Total' and 'S1: Demographic Pressures'. The result is a smaller data frame containing these two variables for all observations. No transformation is applied; this is a pure data selection step.
+```
+
+
+
+### TheOnesOK2
+
+```{r}
+theOnesOK2 = function(DF, DFvariable, CountryColumn='Country') { #This line defines a new function named theOnesOK2. It takes three arguments: DF (a data frame), DFvariable (the name of the numeric variable to analyze), and CountryColumn (the name of the country column (default is "Country"))
+  variable_values <- DF[,DFvariable] #This extracts the column specified by DFvariable from the data frame, rather than assuming a fixed column position.
+  avg_value <- mean(variable_values, na.rm = TRUE) #This calculates the mean of the selected variable, ignoring missing values.
+  is_above <- ifelse(variable_values > avg_value, "Above Average", "Below/At Average") #This compares each value to the mean and assigns a label indicating whether it is above or below/at the average.
+  newname = paste('Status_on', DFvariable) #This dynamically creates a new column name based on the variable being analyzed.
+  DF[,newname] <- is_above #This adds the new status column to the data frame using the dynamically generated column name.
+  return(DF[,c(CountryColumn, newname)]) #This returns only two columns: the country column and the newly created status column.
+} #This closes the function definition.
+```
+
+Difference:
+
+The original function theOnesOK assumes that the numeric variable of interest is always in the second column of the data frame and that the data frame already contains only the relevant columns. It always names the output column Status and returns the entire modified data frame.
+
+In contrast, theOnesOK2 is more flexible and generalizable. It allows the user to specify which variable should be analyzed and which column contains country names, rather than relying on fixed column positions. It also dynamically names the output column based on the variable being analyzed and returns only the country column and the newly created status column. Overall, theOnesOK2 is more reusable, less error-prone, and better suited for working with larger or more complex data frames.
+
+
+
+
+
+
+
+
+
+
+
